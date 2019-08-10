@@ -16,6 +16,8 @@
 #define nil NULL
 
 typedef unsigned int uint;
+typedef struct sockaddr Sockaddr;
+typedef struct sockaddr_in SockaddrINET;
 
 enum {
 	LPORT = 6666
@@ -53,19 +55,29 @@ emalloc(ulong n)
 	return p;
 }
 
+SockaddrINET *
+mkinetsa(char *ipaddr, int port)
+{
+	SockaddrINET *sa;
+
+	sa = emalloc(sizeof(SockaddrINET));
+	sa->sin_family = AF_INET;
+	if(inet_pton(AF_INET, ipaddr, &sa->sin_addr.s_addr) <= 0)
+		sysfatal("inet_pton: %r");
+	sa->sin_port = htons(port);
+	return sa;
+}
+
 int
 listentcp(int port)
 {
-	struct sockaddr_in addr;
+	SockaddrINET *addr;
 	int fd;
 
-	memset(&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(port);
+	addr = mkinetsa("0.0.0.0", port);
 	if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 		return -1;
-	if(bind(fd, (struct sockaddr *)&addr, sizeof addr) < 0){
+	if(bind(fd, (Sockaddr *)addr, sizeof(SockaddrINET)) < 0){
 		close(fd);
 		return -1;
 	}
@@ -74,25 +86,26 @@ listentcp(int port)
 		return -1;
 	}
 	if(debug)
-		fprint(2, "listening on %s!%d\n", inet_ntoa(addr.sin_addr), port);
+		fprint(2, "listening on %s!%d\n", inet_ntoa(addr->sin_addr), port);
+	free(addr);
 	return fd;
 }
 
 int
 acceptcall(int lfd, char *caddr, int caddrlen)
 {
-	struct sockaddr_in addr;
+	SockaddrINET addr;
 	uint addrlen;
 	int fd, port;
 	char *cs;
 
-	memset(&addr, 0, sizeof addr);
-	if((fd = accept(lfd, (struct sockaddr *)&addr, &addrlen)) < 0)
+	memset(&addr, 0, sizeof(SockaddrINET));
+	addrlen = sizeof(SockaddrINET);
+	if((fd = accept(lfd, (Sockaddr *)&addr, &addrlen)) < 0)
 		return -1;
 	cs = inet_ntoa(addr.sin_addr);
 	port = ntohs(addr.sin_port);
 	snprint(caddr, caddrlen, "tcp!%s!%d", cs, port);
-	caddr[caddrlen-1] = 0;
 	if(debug)
 		fprint(2, "thr#%lu accepted call from %s\n", pthread_self(), caddr);
 	return fd;
@@ -113,6 +126,8 @@ tmain(void *a)
 			if(write(1, buf, n) != n)
 				break;
 		close(cfd);
+		if(debug)
+			fprint(2, "thr#%lu ended call with %s\n", pthread_self(), caddr);
 	}
 }
 
@@ -138,7 +153,7 @@ main(int argc, char *argv[])
 	ncpu = get_nprocs_conf();
 	if(ncpu < 1)
 		ncpu = 1;
-	threads = emalloc(ncpu*sizeof(pthread_t));
+	threads = emalloc(sizeof(pthread_t)*ncpu);
 	pthread_mutex_init(&attendlock, nil);
 	for(i = 0; i < ncpu; i++){
 		pthread_create(threads+i, nil, tmain, nil);

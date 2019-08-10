@@ -1,5 +1,5 @@
 CC=cc
-CFLAGS=-Wall -Wno-missing-braces -Wno-parentheses -Wno-switch -ggdb -c -O2
+CFLAGS=-Wall -Wno-missing-braces -Wno-parentheses -Wno-switch -Wno-pointer-to-int-cast -fno-diagnostics-show-caret -fno-diagnostics-color -ggdb -c -O2
 LDFLAGS=-pthread -lfmt -lutf
 O=o
 
@@ -19,7 +19,7 @@ all: $(TARG)
 $(OFILES): $(HFILES)
 
 $(TARG): $(OFILES)
-	$(CC) -o $(TARG) $(OFILES) $(LDFLAGS)
+	$(CC) -o $@ $(OFILES) $(LDFLAGS)
 
 clean:
 	rm $(OFILES) $(TARG)
