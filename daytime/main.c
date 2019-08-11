@@ -11,12 +11,12 @@
 #include <pthread.h>
 #include <utf.h>
 #include <fmt.h>
-#include "dat.h"
-#include "fns.h"
-#include "args.h"
+#include "../dat.h"
+#include "../fns.h"
+#include "../args.h"
 
 enum {
-	LPORT = 6666
+	LPORT = 13
 };
 
 int lfd, ncpu;
@@ -30,7 +30,8 @@ void *
 tmain(void *a)
 {
 	char caddr[128], buf[1024];
-	int cfd, n;
+	int cfd;
+	time_t t;
 
 	for(;;){
 		pthread_mutex_lock(&attendlock);
@@ -39,10 +40,10 @@ tmain(void *a)
 		pthread_mutex_unlock(&attendlock);
 		if(debug)
 			fprint(2, "thr#%lu accepted call from %s\n", pthread_self(), caddr);
-
-		while((n = read(cfd, buf, sizeof buf)) > 0)
-			if(write(1, buf, n) != n)
-				break;
+		t = time(nil);
+		snprint(buf, sizeof buf, "%.24s\r\n", ctime(&t));
+		if(write(cfd, buf, strlen(buf)) != strlen(buf))
+			sysfatal("write: %r");
 		close(cfd);
 		if(debug)
 			fprint(2, "thr#%lu ended call with %s\n", pthread_self(), caddr);

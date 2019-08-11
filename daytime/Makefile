@@ -3,15 +3,15 @@ CFLAGS=-Wall -Wno-missing-braces -Wno-parentheses -Wno-switch -Wno-pointer-to-in
 LDFLAGS=-pthread -lfmt -lutf
 O=o
 
-TARG=csrv
+TARG=tcp13
 OFILES=\
 	main.$O\
-	util.$O\
+	../util.$O\
 
 HFILES=\
-	dat.h\
-	fns.h\
-	args.h\
+	../dat.h\
+	../fns.h\
+	../args.h\
 
 .PHONY: all clean
 all: $(TARG)
@@ -22,7 +22,7 @@ all: $(TARG)
 $(OFILES): $(HFILES)
 
 $(TARG): $(OFILES)
-	$(CC) -o $@ $(OFILES) $(LDFLAGS)
+	$(CC) -o $@ $(OFILES:../%=%) $(LDFLAGS)
 
 clean:
-	rm $(OFILES) $(TARG)
+	rm $(OFILES:../%=%) $(TARG)
